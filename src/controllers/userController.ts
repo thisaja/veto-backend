@@ -5,7 +5,7 @@ import { Request, Response } from "express";
 // @access  Private/Admin
 const getUsers = (req: Request, res: Response) => {
   console.log("getting users");
-  res.send({ message: "This is the message" });
+  res.send({ message: "testing get users" });
 };
 
 export { getUsers };
