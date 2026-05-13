@@ -1,8 +1,13 @@
 import express from "express";
-const router = express.Router();
-const { getUsers } = require("../controllers/userController");
-const { protect, admin } = require("../middleware/authMiddleware");
+import { getUser, createUser } from "../controllers/userController";
+import { protect, admin } from "../middleware/authMiddleware";
+import multer from "multer"
 
-router.route("/").get(protect, admin, getUsers);
+const upload = multer({dest: "uploads/"})
+
+const router = express.Router();
+router.route("/").get(protect, admin, getUser);
+router.route("/").post(upload.single("photo"), protect, admin, createUser);
+
 
 export default router;

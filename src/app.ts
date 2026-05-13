@@ -1,18 +1,16 @@
-import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
-import userRoutes from "./routes/userRoutes";
-import { notFound, errorHandler } from "./utils/errorHandler";
-
 dotenv.config();
 
+import express from "express";
+import userRoutes from "./routes/userRoutes";
+import sessionRoutes from "./routes/sessionRoutes";
+import { notFound, errorHandler } from "./utils/errorHandler";
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-
-app.use("/api/users", userRoutes);
+app.use("/user", userRoutes);
+app.use("/session", sessionRoutes)
 app.use(notFound);
 app.use(errorHandler);
 
