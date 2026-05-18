@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# delete the db
+dropdb veto
+
+# create the db
+createdb veto
+
+# Run the init sql script
+psql -U $1 -d veto -f "$(dirname "$0")/init.sql"
