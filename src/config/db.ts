@@ -4,7 +4,8 @@ const db = new Pool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
   database: process.env.DB_NAME,
-  user: process.env.DB_USER
+  user: process.env.DB_USER,
+  password: "abc123"
 })
  
 db.connect()
