@@ -18,7 +18,7 @@ async function getRestaurant(req: Request, res: Response) {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
-            required: ["id", "header", "imageURL", "label", "description"],
+            required: ["id", "header", "imageURL", "label", "caption"],
             properties: {
               id: {
                 type: Type.INTEGER,
@@ -32,7 +32,7 @@ async function getRestaurant(req: Request, res: Response) {
               label: {
                 type: Type.STRING,
               },
-              description: {
+              caption: {
                 type: Type.STRING,
               },
             },

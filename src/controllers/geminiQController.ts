@@ -42,11 +42,11 @@ async function getQuestion(req: Request, res: Response) {
     }
 
     const questionsList = JSON.parse(response.text);
-    const insertQuery = `INSERT INTO QuestionAnswer (id, question, answer) VALUES ($1, $2, $3)`;
+    
+    const insertQuery = `INSERT INTO QuestionAnswer (id, question, answer) VALUES (DEFAULT, $1, $2)`;
     
     for (const item of questionsList) {
       const values = [
-        item.id, 
         item.question, 
         item.answer,
       ];
