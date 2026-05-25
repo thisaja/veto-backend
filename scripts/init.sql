@@ -10,19 +10,18 @@ CREATE TABLE Users (
 );
 
 CREATE TABLE Sessions (
-    session_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    SessionID uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     UserID uuid REFERENCES Users(UserID) ON DELETE CASCADE
 );
 
 CREATE TABLE Dealbreakers (
-    dealbreaker_id SERIAL PRIMARY KEY,
-    dealbreaker_name varchar(255) NOT NULL
+    DealbreakerID SERIAL PRIMARY KEY,
+    DealbreakerName varchar(255) NOT NULL
 );
 
 -- Creating Users
 INSERT INTO Users (FirstName, LastName, Email, Password, DiningAlias, ProfilePicture, Dealbreakers)
 VALUES 
-('GUEST', 'GUEST', 'GUEST', 'GUEST', 'GUEST', 'GUEST', 'GUEST'),
 ('Samuel', 'Wang Rong', 'samwanron@gmail.com', 'coolguy123', 'coolguy123', NULL, '[0,2]');
 
 -- Creating Session
@@ -31,13 +30,13 @@ VALUES
 (
   (
   SELECT UserID FROM Users
-  WHERE Email='GUEST'
+  WHERE Email='samwanrong@gmail.com'
   LIMIT 1
   )
 );
 
 -- Creating Dealbreakers
-INSERT INTO Dealbreakers (dealbreaker_name)
+INSERT INTO Dealbreakers (DealbreakerName)
 VALUES 
 ('Vegan'),
 ('Vegetarian'),

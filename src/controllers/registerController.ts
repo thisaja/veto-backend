@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import db from "../config/db";
 import User from "../models/userModel";
 import * as argon2 from "argon2";
-import jwt from "jsonwebtoken"
+import { generateJWT } from "../utils/auth";
 
 
 const registerUser = async (req: Request, res: Response) => {
@@ -15,17 +15,15 @@ const registerUser = async (req: Request, res: Response) => {
     
     // Creating new user
     const query = "INSERT INTO Users (FirstName, LastName, Email, Password, DiningAlias, ProfilePicture, Dealbreakers) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING UserID";
-    const values = [user.FirstName, user.LastName, user.Email.toLowerCase(), hashedPassword, user.DiningAlias, req.file?.filename, JSON.stringify(user.Dealbreakers)]
+    const values = [user.FirstName, user.LastName, user.Email.toLowerCase(), hashedPassword, user.DiningAlias, req.file?.filename, user.Dealbreakers]
     const result = await db.query(query, values);
-
+    
     // Creating JWT
     const UserID = result.rows[0].userid
-    const payload = {UserID: UserID}
-    const secret = String(process.env.JWT_SECRET)
-    const token = jwt.sign(payload, secret, {
-        expiresIn: "15m"
-    })
-    res.send({message: "registered successfully", access_token: token})
+    const jwt = generateJWT(UserID)
+
+    // Sending response
+    res.send({message: "registered successfully", user_id: UserID, access_token: jwt})
     console.log(`inserted user ${UserID}`)
   }
   catch (error) {
