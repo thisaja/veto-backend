@@ -31,7 +31,7 @@ async function searchRestaurants(req: Request, res: Response) {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": String(process.env.GOOGLE_MAPS_API_KEY),
         "X-Goog-FieldMask":
-          "places.name,places.nationalPhoneNumber,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.displayName,places.currentOpeningHours,places.priceRange,places.reviews",
+          "places.name,places.nationalPhoneNumber,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.displayName,places.currentOpeningHours,places.priceRange,places.reviews,places.photos",
       },
       body: JSON.stringify(body),
     });
@@ -42,6 +42,16 @@ async function searchRestaurants(req: Request, res: Response) {
       ? dietaryRestrictions.map((i: number) => DIETARY_LABELS[i]).filter(Boolean)
       : [];
 
+    // Store the photo resource name (not a URL) so the API key stays out of the JSON file.
+    // The full photo URL is built at query time in geminiRController using the env key.
+    const places = (data.places || []).map((place: any) => {
+      const { photos, ...rest } = place;
+      return {
+        ...rest,
+        firstPhotoRef: photos?.[0]?.name ?? null,
+      };
+    });
+
     const result = {
       metadata: {
         latitude,
@@ -50,7 +60,7 @@ async function searchRestaurants(req: Request, res: Response) {
         dietaryRestrictions: dietaryLabels,
         fetchedAt: new Date().toISOString(),
       },
-      places: data.places || [],
+      places,
     };
 
     const outputPath = path.join(__dirname, "../response.json");

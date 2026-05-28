@@ -6,10 +6,6 @@ import * as path from "path";
 
 const gaKey = process.env.GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: gaKey});
-const express = require('express');
-const app = express()
-
-app.use(express.json());
 
 async function getRestaurant(req: Request, res: Response) {
   try {
@@ -40,11 +36,28 @@ async function getRestaurant(req: Request, res: Response) {
           },
         },
       };
-      const qa = req.body;
+      const qa = JSON.stringify(req.body);
       const responseFilePath = path.join(__dirname, "../response.json");
       const responseData = JSON.parse(fs.readFileSync(responseFilePath, "utf-8"));
-      const data = JSON.stringify(responseData);
-      const question = `You are an expert group-dining recommendation engine. Your task is to analyze multiple sets of user questionnaire answers and curate the top 5 best restaurant compromises from the provided response.json.
+
+      // Build the real photo URL for each place from the stored reference name.
+      // This is done here at query time so the API key never ends up in response.json.
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      const placesWithPhotos = (responseData.places || []).map((place: any) => ({
+        ...place,
+        photoUrl: place.firstPhotoRef
+          ? `https://places.googleapis.com/v1/${place.firstPhotoRef}/media?maxWidthPx=800&key=${apiKey}`
+          : "",
+      }));
+      const enrichedData = { ...responseData, places: placesWithPhotos };
+      const data = JSON.stringify(enrichedData);
+
+      const question = `You are an expert group-dining recommendation engine. Your task is to analyze multiple sets of user questionnaire answers and curate the top 5 best restaurant compromises from the provided RESTAURANT_DATA.
+
+      ### Critical instruction for imageURL
+      Each restaurant in RESTAURANT_DATA has a "photoUrl" field containing a real Google Places photo URL.
+      You MUST copy this "photoUrl" value exactly as-is into the "imageURL" field of your response for that restaurant.
+      Do NOT invent, hallucinate, or modify photo URLs.
 
       ### Input Data
       1. GROUP_PREFERENCES:
@@ -56,7 +69,7 @@ async function getRestaurant(req: Request, res: Response) {
       ### Conflict Resolution Strategy
       Since not everyone can be perfectly accommodated, apply these strict priority rules to resolve conflicts:
       1. Tier 1 (Non-Negotiable): Dietary certifications (Halal, Vegan, Vegetarian) must act as a strict filter. If one user requires Halal, eliminate all restaurants that cannot accommodate Halal.
-      3. Tier 2 (Compromise Scoring): For subjective preferences (Atmosphere, Service Style, Parking), use a majority-rules approach. Rank restaurants based on the highest total cumulative match score across all users.
+      2. Tier 2 (Compromise Scoring): For subjective preferences (Atmosphere, Service Style, Parking), use a majority-rules approach. Rank restaurants based on the highest total cumulative match score across all users.
       `;
 
       

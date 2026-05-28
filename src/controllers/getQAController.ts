@@ -92,31 +92,33 @@ const getQuestionsAndAnswers = async (req: Request, res: Response) => {
 const submitAnswer = async (req: Request, res: Response) => {
   try {
     const { userId, answers } = req.body;
-    
-    if (!userId || !answers || !Array.isArray(answers)) {
+
+    if (!answers || !Array.isArray(answers)) {
       return res.status(400).json({
         success: false,
-        message: "Missing userId or answers"
+        message: "Missing answers"
       });
     }
 
-    const insertQuery = `INSERT INTO UserAnswers (UserID, QuestionID, Answer) VALUES ($1, $2, $3)`;
-    
-    for (const answer of answers) {
-      const values = [userId, answer.id, answer.value];
-      await db.query(insertQuery, values);
+    // Only persist to DB when a registered userId is available (guests skip DB write)
+    if (userId) {
+      const insertQuery = `INSERT INTO UserAnswers (UserID, QuestionID, Answer) VALUES ($1, $2, $3)`;
+      for (const answer of answers) {
+        const values = [userId, answer.id, answer.value];
+        await db.query(insertQuery, values);
+      }
     }
 
     return res.status(201).json({
       success: true,
       message: "Answers submitted successfully"
     });
-  } 
+  }
   catch (error) {
     console.error("Error submitting answers:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: "Error submitting answers" 
+    return res.status(500).json({
+      success: false,
+      message: "Error submitting answers"
     });
   }
 };
