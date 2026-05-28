@@ -84,7 +84,15 @@ async function getRestaurant(req: Request, res: Response) {
       }
 
       const restaurantList = JSON.parse(response.text);
-      const insertQuery = `INSERT INTO Restaurants (id, header, imageURL, label, caption) VALUES ($1, $2, $3, $4, $5)`;
+      const insertQuery = `
+        INSERT INTO Restaurants (id, header, imageURL, label, caption)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (id) DO UPDATE SET
+          header   = EXCLUDED.header,
+          imageURL = EXCLUDED.imageURL,
+          label    = EXCLUDED.label,
+          caption  = EXCLUDED.caption
+      `;
 
       for (const item of restaurantList) {
         const values = [
