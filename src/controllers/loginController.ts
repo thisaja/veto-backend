@@ -1,29 +1,38 @@
-import { Request, Response } from "express";
-import db from "../config/db";
 import * as argon2 from "argon2";
+import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import db from "../config/db";
 
 const loginUser = async (req: Request, res: Response) => {
   try {
-    // Parse body
-    const user = req.body
+    const { Email, Password } = req.body;
 
-    // Get corresponding user password
-    let query = "SELECT Password FROM Users WHERE Email=$1"
-    let values = [user.Email.toLowerCase()]
-    const result = await db.query(query, values);
-    const hashedPassword = result.rows[0].password
+    if (!Email || !Password) {
+      return res.status(400).send({ message: "Email and password required" });
+    }
 
-    // Verify password
-    if (await argon2.verify(hashedPassword, user.Password)) {
-        res.send({user: "ok"})
+    const result = await db.query(
+      "SELECT UserID, Password FROM Users WHERE Email = $1",
+      [Email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).send({ message: "User not found" });
     }
-    else {
-        res.status(401).send({message: "incorrect password"})
+
+    const { userid: userId, password: hashedPassword } = result.rows[0];
+
+    if (!(await argon2.verify(hashedPassword, Password))) {
+      return res.status(401).send({ message: "Incorrect password" });
     }
-  }
-  catch (error) {
-    res.status(500).send({message: "error logging in"});
-    console.error("error logging in", error);
+
+    const secret = String(process.env.JWT_SECRET);
+    const token = jwt.sign({ UserID: userId }, secret, { expiresIn: "7d" });
+
+    return res.send({ message: "Logged in successfully", userId, access_token: token });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    return res.status(500).send({ message: "Error logging in" });
   }
 };
 

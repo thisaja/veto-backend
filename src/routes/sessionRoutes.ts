@@ -1,8 +1,7 @@
-import express from "express"
-import {protect, admin} from "../middleware/authMiddleware"
-import { createSession } from "../controllers/sessionController"
+import express from "express";
+import { createSession } from "../controllers/sessionController";
 
-const router = express.Router()
-router.route("/create").post(protect, admin, createSession)
+const router = express.Router();
+router.route("/create").post(createSession);
 
-export default router
+export default router;
