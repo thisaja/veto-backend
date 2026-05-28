@@ -1,7 +1,8 @@
 import db from "../config/db";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Request, Response } from "express";
-import responseData from "../response.json";
+import * as fs from "fs";
+import * as path from "path";
 
 const gaKey = process.env.GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: gaKey});
@@ -40,6 +41,8 @@ async function getRestaurant(req: Request, res: Response) {
         },
       };
       const qa = req.body;
+      const responseFilePath = path.join(__dirname, "../response.json");
+      const responseData = JSON.parse(fs.readFileSync(responseFilePath, "utf-8"));
       const data = JSON.stringify(responseData);
       const question = `You are an expert group-dining recommendation engine. Your task is to analyze multiple sets of user questionnaire answers and curate the top 5 best restaurant compromises from the provided response.json.
 

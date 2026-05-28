@@ -1,7 +1,8 @@
 import db from "../config/db";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Request, Response } from "express";
-import responseData from "../response.json";
+import * as fs from "fs";
+import * as path from "path";
 
 const gaKey = process.env.GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: gaKey });
@@ -29,6 +30,8 @@ async function getQuestion(req: Request, res: Response) {
 
     const sessionId = req.query.sessionId ? (req.query.sessionId as string) : null;
 
+    const responseFilePath = path.join(__dirname, "../response.json");
+    const responseData = JSON.parse(fs.readFileSync(responseFilePath, "utf-8"));
     const data = JSON.stringify(responseData);
     const prompt = `You are a professional culinary matchmaking algorithm. Dynamically analyze the provided JSON restaurant dataset and generate a 10-question multiple-choice questionnaire specifically tailored to the unique distinguishing attributes of these restaurants. Your goal is to identify high-impact filters within the specific metadata and reviews provided, focusing on service style, atmosphere, wait times, dietary requirements, and price points. Each question must be under 15 words and each option must be under 7 words. Use direct, professional language that prioritizes clear intentions. Analyze this data: ${data}`;
 
