@@ -42,13 +42,13 @@ async function searchRestaurants(req: Request, res: Response) {
       ? dietaryRestrictions.map((i: number) => DIETARY_LABELS[i]).filter(Boolean)
       : [];
 
-    // Store the photo resource name (not a URL) so the API key stays out of the JSON file.
-    // The full photo URL is built at query time in geminiRController using the env key.
+    // Store up to 5 photo resource names (no URLs) so the API key stays out of the JSON file.
+    // Full photo URLs are built at query time in geminiRController using the env key.
     const places = (data.places || []).map((place: any) => {
       const { photos, ...rest } = place;
       return {
         ...rest,
-        firstPhotoRef: photos?.[0]?.name ?? null,
+        photoRefs: (photos || []).slice(0, 5).map((p: any) => p.name).filter(Boolean),
       };
     });
 

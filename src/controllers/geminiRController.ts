@@ -15,22 +15,20 @@ async function getRestaurant(req: Request, res: Response) {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
-            required: ["id", "header", "imageURL", "label", "caption"],
+            required: ["id", "header", "imageURL", "imageURLs", "label", "caption", "popularItems"],
             properties: {
-              id: {
-                type: Type.INTEGER,
+              id: { type: Type.INTEGER },
+              header: { type: Type.STRING },
+              imageURL: { type: Type.STRING },
+              imageURLs: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
               },
-              header: {
-                type: Type.STRING,
-              },
-              imageURL: {
-                type: Type.STRING,
-              },
-              label: {
-                type: Type.STRING,
-              },
-              caption: {
-                type: Type.STRING,
+              label: { type: Type.STRING },
+              caption: { type: Type.STRING },
+              popularItems: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
               },
             },
           },
@@ -40,24 +38,25 @@ async function getRestaurant(req: Request, res: Response) {
       const responseFilePath = path.join(__dirname, "../response.json");
       const responseData = JSON.parse(fs.readFileSync(responseFilePath, "utf-8"));
 
-      // Build the real photo URL for each place from the stored reference name.
-      // This is done here at query time so the API key never ends up in response.json.
+      // Build all real photo URLs from stored references at query time.
+      // API key is injected here so it never ends up in response.json.
       const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-      const placesWithPhotos = (responseData.places || []).map((place: any) => ({
-        ...place,
-        photoUrl: place.firstPhotoRef
-          ? `https://places.googleapis.com/v1/${place.firstPhotoRef}/media?maxWidthPx=800&key=${apiKey}`
-          : "",
-      }));
+      const placesWithPhotos = (responseData.places || []).map((place: any) => {
+        const photoUrls = (place.photoRefs || []).map(
+          (ref: string) =>
+            `https://places.googleapis.com/v1/${ref}/media?maxWidthPx=800&key=${apiKey}`
+        );
+        return { ...place, photoUrls };
+      });
       const enrichedData = { ...responseData, places: placesWithPhotos };
       const data = JSON.stringify(enrichedData);
 
-      const question = `You are an expert group-dining recommendation engine. Your task is to analyze multiple sets of user questionnaire answers and curate the top 5 best restaurant compromises from the provided RESTAURANT_DATA.
+      const question = `You are an expert group-dining recommendation engine. Analyze the user preferences and curate the top 5 best restaurant compromises from RESTAURANT_DATA.
 
-      ### Critical instruction for imageURL
-      Each restaurant in RESTAURANT_DATA has a "photoUrl" field containing a real Google Places photo URL.
-      You MUST copy this "photoUrl" value exactly as-is into the "imageURL" field of your response for that restaurant.
-      Do NOT invent, hallucinate, or modify photo URLs.
+      ### Critical instructions
+      1. imageURL: copy photoUrls[0] from RESTAURANT_DATA exactly as-is. Do NOT invent or modify URLs.
+      2. imageURLs: copy the entire photoUrls array from RESTAURANT_DATA exactly as-is for that restaurant.
+      3. popularItems: generate 3–5 signature or well-known menu items for the restaurant. Base them on the restaurant name, cuisine type, and any review content available. Use concise dish names only (e.g. "Truffle Tagliatelle", "Spicy Tuna Roll").
 
       ### Input Data
       1. GROUP_PREFERENCES:
@@ -67,9 +66,8 @@ async function getRestaurant(req: Request, res: Response) {
       ${data}
 
       ### Conflict Resolution Strategy
-      Since not everyone can be perfectly accommodated, apply these strict priority rules to resolve conflicts:
-      1. Tier 1 (Non-Negotiable): Dietary certifications (Halal, Vegan, Vegetarian) must act as a strict filter. If one user requires Halal, eliminate all restaurants that cannot accommodate Halal.
-      2. Tier 2 (Compromise Scoring): For subjective preferences (Atmosphere, Service Style, Parking), use a majority-rules approach. Rank restaurants based on the highest total cumulative match score across all users.
+      1. Tier 1 (Non-Negotiable): Dietary certifications (Halal, Vegan, Vegetarian) are strict filters.
+      2. Tier 2 (Compromise Scoring): Rank by highest cumulative preference match across all users.
       `;
 
       
