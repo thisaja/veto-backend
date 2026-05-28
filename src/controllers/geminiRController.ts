@@ -25,6 +25,8 @@ async function getRestaurant(req: Request, res: Response) {
                 items: { type: Type.STRING },
               },
               label: { type: Type.STRING },
+              priceRange: { type: Type.STRING },
+              rating: { type: Type.STRING },
               caption: { type: Type.STRING },
               popularItems: {
                 type: Type.ARRAY,
@@ -57,6 +59,8 @@ async function getRestaurant(req: Request, res: Response) {
       1. imageURL: copy photoUrls[0] from RESTAURANT_DATA exactly as-is. Do NOT invent or modify URLs.
       2. imageURLs: copy the entire photoUrls array from RESTAURANT_DATA exactly as-is for that restaurant.
       3. popularItems: generate 3–5 signature or well-known menu items for the restaurant. Base them on the restaurant name, cuisine type, and any review content available. Use concise dish names only (e.g. "Truffle Tagliatelle", "Spicy Tuna Roll").
+      4. priceRange: output "$", "$$", "$$$", or "$$$$" using the priceRange field from RESTAURANT_DATA if present, otherwise estimate from cuisine type and restaurant name.
+      5. rating: copy the numeric rating from RESTAURANT_DATA as a string (e.g., "4.5"). Use an empty string if unavailable.
 
       ### Input Data
       1. GROUP_PREFERENCES:
