@@ -124,13 +124,17 @@ const getSessionHistory = async (req: Request, res: Response) => {
       `SELECT
          s.session_id   AS "sessionId",
          s.created_at   AS "createdAt",
+         r.id           AS "restaurantId",
          r.header       AS "matchedRestaurant",
-         r."imageURL"   AS "imageURL"
+         r."imageURL"   AS "imageURL",
+         r.label        AS "label",
+         r.caption      AS "caption",
+         (SELECT COUNT(*) FROM SessionMembers sm2
+          WHERE sm2.session_id = s.session_id)::int AS "memberCount"
        FROM Sessions s
-       JOIN SessionMembers sm ON sm.session_id = s.session_id
-       LEFT JOIN Rooms ro     ON ro.session_id = s.session_id
+       JOIN SessionMembers sm ON sm.session_id = s.session_id AND sm.user_id = $1
+       LEFT JOIN Rooms ro      ON ro.session_id = s.session_id
        LEFT JOIN Restaurants r ON r.id = ro.winner_restaurant_id
-       WHERE sm.user_id = $1
        ORDER BY s.created_at DESC
        LIMIT 10`,
       [userId]
