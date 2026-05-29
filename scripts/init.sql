@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS Sessions, Dealbreakers, QuestionAnswer, Restaurants, Users CASCADE;
+DROP TABLE IF EXISTS RoundVotes, Rooms, Sessions, Dealbreakers, QuestionAnswer, Restaurants, Users CASCADE;
 
 CREATE TABLE Users (
   UserID uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,6 +42,26 @@ CREATE TABLE Restaurants (
   imageURL varchar(1000) NOT NULL,
   label varchar(255) NOT NULL,
   caption varchar(255) NOT NULL
+);
+
+-- ── Pick/Ban tables ──────────────────────────────────────────────────────
+
+CREATE TABLE Rooms (
+  room_id        uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id     uuid    REFERENCES Sessions(session_id) ON DELETE CASCADE,
+  status         varchar(20) NOT NULL DEFAULT 'active',
+  current_round  int     NOT NULL DEFAULT 1,
+  winner_restaurant_id int,
+  created_at     timestamp NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE RoundVotes (
+  id             SERIAL PRIMARY KEY,
+  room_id        uuid    REFERENCES Rooms(room_id) ON DELETE CASCADE,
+  round_number   int     NOT NULL,
+  restaurant_id  int     NOT NULL,
+  vote_count     int     NOT NULL DEFAULT 0,
+  voted_at       timestamp NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_sessions_user ON Sessions(UserID);
