@@ -9,6 +9,32 @@ const ai = new GoogleGenAI({ apiKey: gaKey });
 
 async function getQuestion(req: Request, res: Response) {
   try {
+    const sessionId = req.query.sessionId ? (req.query.sessionId as string) : null;
+
+    // ── 1. DB-first cache: return existing questions for this session ─────────
+    if (sessionId) {
+      const existing = await db.query(
+        `SELECT "Question" AS question, "Answer" AS answer
+         FROM QuestionAnswer WHERE session_id = $1 ORDER BY id LIMIT 15`,
+        [sessionId]
+      );
+      if (existing.rows.length > 0) {
+        const cached = existing.rows.map((r: any, i: number) => ({
+          id: i + 1,
+          question: r.question,
+          answer: Array.isArray(r.answer) ? r.answer : [r.answer],
+        }));
+        console.log(`[getQuestion] returning ${cached.length} cached questions for session ${sessionId}`);
+        return res.json({ success: true, data: cached });
+      }
+    }
+
+    // ── 2. Guard: response.json must exist before calling Gemini ─────────────
+    const responseFilePath = path.join(__dirname, "../response.json");
+    if (!fs.existsSync(responseFilePath)) {
+      return res.status(503).json({ success: false, error: "Restaurant data not yet available. Run the Places search first." });
+    }
+
     const config = {
       responseMimeType: 'application/json',
       responseSchema: {
@@ -17,7 +43,7 @@ async function getQuestion(req: Request, res: Response) {
           type: Type.OBJECT,
           required: ["id", "question", "answer"],
           properties: {
-            id: { type: Type.INTEGER }, 
+            id: { type: Type.INTEGER },
             question: { type: Type.STRING },
             answer: {
               type: Type.ARRAY,
@@ -28,18 +54,20 @@ async function getQuestion(req: Request, res: Response) {
       },
     };
 
-    const sessionId = req.query.sessionId ? (req.query.sessionId as string) : null;
-
-    const responseFilePath = path.join(__dirname, "../response.json");
     const responseData = JSON.parse(fs.readFileSync(responseFilePath, "utf-8"));
     const data = JSON.stringify(responseData);
     const prompt = `You are a professional culinary matchmaking algorithm. Dynamically analyze the provided JSON restaurant dataset and generate a 10-question multiple-choice questionnaire specifically tailored to the unique distinguishing attributes of these restaurants. Your goal is to identify high-impact filters within the specific metadata and reviews provided, focusing on service style, atmosphere, wait times, dietary requirements, and price points. Each question must be under 15 words and each option must be under 7 words. Use direct, professional language that prioritizes clear intentions. Analyze this data: ${data}`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite",
+    // ── 3. Gemini call with 25s hard timeout ──────────────────────────────────
+    const geminiPromise = ai.models.generateContent({
+      model: "gemini-2.0-flash-lite",
       config,
       contents: prompt,
     });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Gemini request timed out after 25s")), 25000)
+    );
+    const response = await Promise.race([geminiPromise, timeoutPromise]);
     
 
     if (!response.text) {
