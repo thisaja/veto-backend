@@ -205,22 +205,26 @@ export function initPickBanSocket(server: HttpServer) {
     );
 
     // ── cast_vote ──────────────────────────────────────────────────────────
+    // Clients may call cast_vote multiple times to change their vote.
+    // The server removes the socket's previous vote (if any) before applying the new one.
     socket.on(
       "cast_vote",
-      ({ sessionId, restaurantId }: { sessionId: string; restaurantId: number }) => {
+      ({ sessionId, restaurantId }: { sessionId: string; restaurantId: number | null }) => {
         const room = rooms.get(sessionId);
         if (!room || room.status !== "active") return;
 
-        // One vote per socket per round
+        // Remove existing vote from whichever restaurant this socket previously voted for
         for (const [, voters] of room.votes) {
-          if (voters.has(socket.id)) return; // already voted
+          voters.delete(socket.id);
         }
 
-        const voters = room.votes.get(restaurantId);
-        if (voters) {
-          voters.add(socket.id);
-          io.to(sessionId).emit("vote_update", { voteCounts: voteCounts(room) });
+        // If restaurantId is null the user is simply removing their vote
+        if (restaurantId !== null) {
+          const voters = room.votes.get(restaurantId);
+          if (voters) voters.add(socket.id);
         }
+
+        io.to(sessionId).emit("vote_update", { voteCounts: voteCounts(room) });
       }
     );
 

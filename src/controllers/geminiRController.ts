@@ -55,7 +55,16 @@ async function getRestaurant(req: Request, res: Response) {
 
       const question = `You are an expert group-dining recommendation engine. Analyze the user preferences and curate the top 5 best restaurant compromises from RESTAURANT_DATA.
 
-      ### Critical instructions
+      ### HARD FILTERS — apply these BEFORE any scoring. If ANY user in the group has one of these requirements, you MUST completely exclude every restaurant that does not satisfy it. Do NOT include a non-compliant restaurant even if it scores highly on other dimensions.
+      - Halal: only include restaurants explicitly certified or confirmed Halal.
+      - Vegan: only include restaurants that can fully accommodate a vegan diet (dedicated vegan menu or clearly labelled vegan options).
+      - Vegetarian: only include restaurants with substantial vegetarian options.
+      - Gluten-Free: only include restaurants that can safely serve gluten-free meals.
+      - Nut Allergy: only include restaurants that can guarantee nut-free preparation.
+      - Kosher: only include restaurants that are Kosher-certified.
+      If the remaining pool after applying hard filters has fewer than 5 restaurants, return however many pass — do NOT add back filtered-out restaurants to reach 5.
+
+      ### Output instructions
       1. imageURL: copy photoUrls[0] from RESTAURANT_DATA exactly as-is. Do NOT invent or modify URLs.
       2. imageURLs: copy the entire photoUrls array from RESTAURANT_DATA exactly as-is for that restaurant.
       3. popularItems: generate 3–5 signature or well-known menu items for the restaurant. Base them on the restaurant name, cuisine type, and any review content available. Use concise dish names only (e.g. "Truffle Tagliatelle", "Spicy Tuna Roll").
@@ -69,9 +78,8 @@ async function getRestaurant(req: Request, res: Response) {
       2. RESTAURANT_DATA:
       ${data}
 
-      ### Conflict Resolution Strategy
-      1. Tier 1 (Non-Negotiable): Dietary certifications (Halal, Vegan, Vegetarian) are strict filters.
-      2. Tier 2 (Compromise Scoring): Rank by highest cumulative preference match across all users.
+      ### Ranking (after hard filters pass)
+      Rank remaining restaurants by highest cumulative preference match across all users. Favour variety of cuisine types in the final 5.
       `;
 
       
