@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import db from "../config/db";
+import { notifyUser } from "../sockets/notificationSocket";
 
 // ── POST /session/create ─────────────────────────────────────────────────────
 const createSession = async (req: Request, res: Response) => {
@@ -123,19 +124,19 @@ const getSessionHistory = async (req: Request, res: Response) => {
     // Query Sessions directly by UserID — no SessionMembers join needed
     const result = await db.query(
       `SELECT
-         s.session_id    AS "sessionId",
-         s.created_at    AS "createdAt",
-         r.id            AS "restaurantId",
-         r.header        AS "matchedRestaurant",
-         r."imageURL"    AS "imageURL",
-         r.label         AS "label",
-         r.caption       AS "caption",
-         0               AS "memberCount"
+         s.session_id      AS "sessionId",
+         s.createdat       AS "createdAt",
+         r.id              AS "restaurantId",
+         r.header          AS "matchedRestaurant",
+         r."imageURL"      AS "imageURL",
+         r.label           AS "label",
+         r.caption         AS "caption",
+         (SELECT COUNT(*)::int FROM SessionMembers sm WHERE sm.session_id = s.session_id) AS "memberCount"
        FROM Sessions s
        LEFT JOIN Rooms ro      ON ro.session_id = s.session_id
        LEFT JOIN Restaurants r ON r.id = ro.winner_restaurant_id
-       WHERE s."UserID" = $1
-       ORDER BY s.created_at DESC
+       WHERE s.userid = $1
+       ORDER BY s.createdat DESC
        LIMIT 10`,
       [userId]
     );
@@ -146,4 +147,24 @@ const getSessionHistory = async (req: Request, res: Response) => {
   }
 };
 
-export { createSession, joinSession, getSessionMembers, validateSession, getSessionHistory };
+// ── POST /session/invite ─────────────────────────────────────────────────────
+// Sends an in-app socket notification to a friend inviting them to join a session.
+const inviteFriend = async (req: Request, res: Response) => {
+  const { sessionId, hostAlias, friendUserId } = req.body;
+  if (!sessionId || !friendUserId) {
+    return res.status(400).json({ success: false, message: "sessionId and friendUserId required" });
+  }
+  try {
+    notifyUser(friendUserId, "session_invite", {
+      sessionId,
+      hostAlias: hostAlias ?? "Someone",
+      deepLink:  `veto://join/${sessionId}`,
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("inviteFriend error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export { createSession, joinSession, getSessionMembers, validateSession, getSessionHistory, inviteFriend };

@@ -26,9 +26,12 @@ const registerUser = async (req: Request, res: Response) => {
     // Hashing password
     const hashedPassword = await argon2.hash(user.Password)
 
+    // Resolve profile picture: uploaded file takes precedence over a preset key
+    const profilePicture = req.file?.filename ?? (user as any).PresetAvatar ?? null;
+
     // Creating new user
     const query = "INSERT INTO Users (FirstName, LastName, Email, Password, DiningAlias, ProfilePicture, Dealbreakers) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING UserID";
-    const values = [user.FirstName, user.LastName, user.Email.toLowerCase(), hashedPassword, diningAlias, req.file?.filename, JSON.stringify(user.Dealbreakers)]
+    const values = [user.FirstName, user.LastName, user.Email.toLowerCase(), hashedPassword, diningAlias, profilePicture, JSON.stringify(user.Dealbreakers)]
     const result = await db.query(query, values);
 
     // Creating JWT

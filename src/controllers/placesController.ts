@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import * as fs from "fs";
 import * as path from "path";
+import { savePlacesData } from "../services/placesStore";
 
 const DIETARY_LABELS = ["Vegan", "Vegetarian", "Gluten-Free", "Halal", "Nut Allergy", "Kosher"];
 
 async function searchRestaurants(req: Request, res: Response) {
-  const { latitude, longitude, radius, dietaryRestrictions } = req.body;
+  const { latitude, longitude, radius, dietaryRestrictions, sessionId } = req.body;
 
   if (latitude === undefined || longitude === undefined || radius === undefined) {
     return res.status(400).json({ success: false, error: "latitude, longitude, and radius are required" });
@@ -31,7 +32,7 @@ async function searchRestaurants(req: Request, res: Response) {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": String(process.env.GOOGLE_MAPS_API_KEY),
         "X-Goog-FieldMask":
-          "places.name,places.nationalPhoneNumber,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.displayName,places.currentOpeningHours,places.priceRange,places.reviews,places.photos",
+          "places.name,places.nationalPhoneNumber,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.displayName,places.primaryTypeDisplayName,places.editorialSummary,places.currentOpeningHours,places.priceRange,places.reviews,places.photos",
       },
       body: JSON.stringify(body),
     });
@@ -63,10 +64,15 @@ async function searchRestaurants(req: Request, res: Response) {
       places,
     };
 
+    // Per-session store (preferred — isolated per session)
+    if (sessionId) {
+      savePlacesData(sessionId, result);
+      console.log(`Places API: saved ${result.places.length} restaurants for session ${sessionId}`);
+    }
+
+    // Legacy fallback file (still written so standalone Gemini testing still works)
     const outputPath = path.join(__dirname, "../response.json");
     fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
-
-    console.log(`Places API: saved ${result.places.length} restaurants to response.json`);
 
     return res.status(200).json({ success: true, data: result });
   } catch (error: any) {
